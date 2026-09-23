@@ -51,6 +51,23 @@ final class PetWindowController {
 
         self.window = window
     }
+
+    var isWindowVisible: Bool {
+        window?.isVisible ?? false
+    }
+
+    func toggleVisibility() {
+        guard let window = window else {
+            show()
+            return
+        }
+
+        if window.isVisible {
+            window.orderOut(nil)
+        } else {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
 }
 
 

@@ -37,46 +37,65 @@ struct ContentView: View {
                     engine.pokePet()
                 }
                 .contextMenu {
-                    Button(action: {
-                        engine.toggleAutoMode()
-                    }) {
-                        Text(engine.isAutoMode ? "✓ Auto Roam (Active)" : "Auto Roam (Paused)")
-                    }
-
-                    Menu("Roaming Mode 📍") {
-                        ForEach(RoamingMode.allCases) { mode in
-                            Button(action: {
-                                engine.setRoamingMode(mode)
-                            }) {
-                                Text(engine.roamingMode == mode ? "✓ \(mode.rawValue)" : mode.rawValue)
-                            }
-                        }
-                    }
-
-                    Button("Meow! 🐾") {
+                    Button {
                         engine.pokePet()
+                    } label: {
+                        Label("Meow", systemImage: "bubble.left")
+                    }
+
+                    Button {
+                        engine.toggleAutoMode()
+                    } label: {
+                        if engine.isAutoMode {
+                            Label("Auto Roam (Active)", systemImage: "checkmark.circle.fill")
+                        } else {
+                            Label("Auto Roam (Paused)", systemImage: "pause.circle")
+                        }
                     }
 
                     Divider()
 
-                    Menu("Change Size") {
+                    Menu {
+                        ForEach(RoamingMode.allCases) { mode in
+                            Button {
+                                engine.setRoamingMode(mode)
+                            } label: {
+                                if engine.roamingMode == mode {
+                                    Text("✓ \(mode.title)")
+                                } else {
+                                    Text(mode.title)
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Mode", systemImage: "location")
+                    }
+
+                    Menu {
                         Button("Small (2x)") { engine.petScale = 2.0 }
                         Button("Medium (2.5x)") { engine.petScale = 2.5 }
                         Button("Large (3.5x)") { engine.petScale = 3.5 }
-                        Button("Extra Large (4.5x)") { engine.petScale = 4.5 }
-                        Button("Giant (5x)") { engine.petScale = 5.0 }
+                        Button("Giant (4.5x)") { engine.petScale = 4.5 }
+                    } label: {
+                        Label("Size", systemImage: "arrow.up.left.and.arrow.down.right")
+                    }
+
+                    Menu {
+                        ForEach(PetAnimation.allCases) { anim in
+                            Button(anim.title) {
+                                engine.setManualAnimation(anim)
+                            }
+                        }
+                    } label: {
+                        Label("Action", systemImage: "figure.walk")
                     }
 
                     Divider()
 
-                    Menu("Manual Animations") {
-                        ForEach(PetAnimation.allCases) { anim in
-                            Button(action: {
-                                engine.setManualAnimation(anim)
-                            }) {
-                                Text(anim.title)
-                            }
-                        }
+                    Button(role: .destructive) {
+                        NSApplication.shared.terminate(nil)
+                    } label: {
+                        Label("Quit Buddy", systemImage: "power")
                     }
                 }
         }

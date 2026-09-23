@@ -3,11 +3,19 @@ import Combine
 import SwiftUI
 
 enum RoamingMode: String, CaseIterable, Identifiable {
-    case freeRoam = "Free Roam (Full Screen)"
-    case menuBar = "Walk on Menu Bar 🍎"
-    case bottomScreen = "Walk on Bottom Screen"
+    case freeRoam = "Free Roam"
+    case menuBar = "Main Menu Bar"
+    case bottomScreen = "Bottom Screen"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .freeRoam: return "Free Roam"
+        case .menuBar: return "Main Menu Bar 🍎"
+        case .bottomScreen: return "Bottom Screen"
+        }
+    }
 }
 
 @MainActor
@@ -37,6 +45,27 @@ final class PetBehaviorEngine: ObservableObject {
 
     func startBehaviorLoop() {
         scheduleNextAction(delay: 2.0)
+    }
+
+    func moveToMainMenu() {
+        roamingMode = .menuBar
+        isAutoMode = true
+        moveTimer?.invalidate()
+        moveTimer = nil
+        targetPosition = nil
+
+        guard let window = window, let screen = window.screen ?? NSScreen.main else { return }
+        let screenFrame = screen.frame
+        let windowWidth = window.frame.width
+        let windowHeight = window.frame.height
+
+        let petSize = 50 * petScale
+        let padX = (windowWidth - petSize) / 2
+
+        let targetY = screenFrame.maxY - (windowHeight / 2) - 14
+        let targetX = screenFrame.minX - padX + 50
+
+        startWalkingTo(target: CGPoint(x: targetX, y: targetY), isRunning: false)
     }
 
     func setRoamingMode(_ mode: RoamingMode) {
@@ -116,45 +145,36 @@ final class PetBehaviorEngine: ObservableObject {
     private func performRandomAction() {
         guard isAutoMode, !isDragging else { return }
 
-        // Weighted random action selection
         let roll = Int.random(in: 1...100)
 
         switch roll {
         case 1...40:
-            // Walk somewhere
             startWalking(isRunning: false)
 
         case 41...52:
-            // Zoomies / Run
             startWalking(isRunning: true)
 
         case 53...66:
-            // Stand idle / Look around
             currentAnimation = .idle
             scheduleNextAction(delay: Double.random(in: 3.0...6.0))
 
         case 67...76:
-            // Big stretch
             currentAnimation = .stretching
             scheduleNextAction(delay: 3.5)
 
         case 77...84:
-            // Scratch an itch
             currentAnimation = .itch
             scheduleNextAction(delay: 2.5)
 
         case 85...92:
-            // Groom paws
             currentAnimation = Bool.random() ? .licking1 : .licking2
             scheduleNextAction(delay: 3.0)
 
         case 93...97:
-            // Take a short nap
             currentAnimation = .laying
             scheduleNextAction(delay: Double.random(in: 4.0...8.0))
 
         default:
-            // Meow
             pokePet()
         }
     }
@@ -181,22 +201,25 @@ final class PetBehaviorEngine: ObservableObject {
 
         switch roamingMode {
         case .menuBar:
-            // Feet walk right along the top menu bar / absolute top
-            targetY = screenFrame.maxY - windowHeight + padY - 20
+            targetY = screenFrame.maxY - (windowHeight / 2) - 14
             targetX = CGFloat.random(in: minX...maxX)
 
         case .bottomScreen:
-            // Feet walk along the absolute bottom edge
             targetY = screenFrame.minY - padY
             targetX = CGFloat.random(in: minX...maxX)
 
         case .freeRoam:
             let minY = screenFrame.minY - padY
-            let maxY = screenFrame.maxY - windowHeight + padY - 20
+            let maxY = screenFrame.maxY - (windowHeight / 2) - 14
             targetY = CGFloat.random(in: minY...max(minY, maxY))
         }
 
-        let target = CGPoint(x: targetX, y: targetY)
+        startWalkingTo(target: CGPoint(x: targetX, y: targetY), isRunning: isRunning)
+    }
+
+    private func startWalkingTo(target: CGPoint, isRunning: Bool) {
+        guard let window = window else { return }
+
         self.targetPosition = target
 
         let currentOrigin = window.frame.origin
@@ -204,7 +227,7 @@ final class PetBehaviorEngine: ObservableObject {
         isFacingLeft = dx < 0
 
         currentAnimation = isRunning ? .run : .walk
-        walkSpeed = isRunning ? 4.5 : 2.0
+        walkSpeed = isRunning ? 4.5 : 2.2
 
         moveTimer?.invalidate()
         moveTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
@@ -226,7 +249,6 @@ final class PetBehaviorEngine: ObservableObject {
         let distance = hypot(dx, dy)
 
         if distance < walkSpeed {
-            // Reached destination
             window.setFrameOrigin(target)
             timer.invalidate()
             moveTimer = nil
