@@ -40,7 +40,17 @@ struct ContentView: View {
                     Button(action: {
                         engine.toggleAutoMode()
                     }) {
-                        Text(engine.isAutoMode ? "✓ Auto Roam (Enabled)" : "Auto Roam (Disabled)")
+                        Text(engine.isAutoMode ? "✓ Auto Roam (Active)" : "Auto Roam (Paused)")
+                    }
+
+                    Menu("Roaming Mode 📍") {
+                        ForEach(RoamingMode.allCases) { mode in
+                            Button(action: {
+                                engine.setRoamingMode(mode)
+                            }) {
+                                Text(engine.roamingMode == mode ? "✓ \(mode.rawValue)" : mode.rawValue)
+                            }
+                        }
                     }
 
                     Button("Meow! 🐾") {

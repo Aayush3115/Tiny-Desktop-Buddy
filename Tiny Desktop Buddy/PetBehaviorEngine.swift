@@ -2,12 +2,23 @@ import AppKit
 import Combine
 import SwiftUI
 
+enum RoamingMode: String, CaseIterable, Identifiable {
+    case freeRoam = "Free Roam (Full Screen)"
+    case menuBar = "Walk on Menu Bar 🍎"
+    case bottomScreen = "Walk on Bottom Screen"
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class PetBehaviorEngine: ObservableObject {
+
+    static let shared = PetBehaviorEngine()
 
     @Published var currentAnimation: PetAnimation = .idle
     @Published var isFacingLeft: Bool = false
     @Published var isAutoMode: Bool = true
+    @Published var roamingMode: RoamingMode = .freeRoam
     @Published var petScale: CGFloat = 3.5
     @Published var showMeowBubble: Bool = false
 
@@ -26,6 +37,15 @@ final class PetBehaviorEngine: ObservableObject {
 
     func startBehaviorLoop() {
         scheduleNextAction(delay: 2.0)
+    }
+
+    func setRoamingMode(_ mode: RoamingMode) {
+        roamingMode = mode
+        isAutoMode = true
+        moveTimer?.invalidate()
+        moveTimer = nil
+        targetPosition = nil
+        startWalking(isRunning: false)
     }
 
     func userStartedDragging() {
@@ -149,19 +169,32 @@ final class PetBehaviorEngine: ObservableObject {
         let windowWidth = window.frame.width
         let windowHeight = window.frame.height
 
-        // Random target anywhere on the screen
-        let minX = screenFrame.minX + 20
-        let maxX = screenFrame.maxX - windowWidth - 20
-        let minY = screenFrame.minY + 40
-        let maxY = screenFrame.maxY - windowHeight - 10
+        let petSize = 50 * petScale
+        let padX = (windowWidth - petSize) / 2
+        let padY = (windowHeight - petSize) / 2
 
-        guard maxX > minX, maxY > minY else {
-            scheduleNextAction(delay: 2.0)
-            return
+        let minX = screenFrame.minX - padX
+        let maxX = screenFrame.maxX - windowWidth + padX
+
+        var targetX = CGFloat.random(in: minX...maxX)
+        var targetY: CGFloat
+
+        switch roamingMode {
+        case .menuBar:
+            // Feet walk right along the top menu bar / absolute top
+            targetY = screenFrame.maxY - windowHeight + padY - 20
+            targetX = CGFloat.random(in: minX...maxX)
+
+        case .bottomScreen:
+            // Feet walk along the absolute bottom edge
+            targetY = screenFrame.minY - padY
+            targetX = CGFloat.random(in: minX...maxX)
+
+        case .freeRoam:
+            let minY = screenFrame.minY - padY
+            let maxY = screenFrame.maxY - windowHeight + padY - 20
+            targetY = CGFloat.random(in: minY...max(minY, maxY))
         }
-
-        let targetX = CGFloat.random(in: minX...maxX)
-        let targetY = CGFloat.random(in: minY...maxY)
 
         let target = CGPoint(x: targetX, y: targetY)
         self.targetPosition = target

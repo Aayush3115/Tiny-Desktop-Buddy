@@ -4,7 +4,7 @@ import SwiftUI
 final class PetWindowController {
 
     private var window: NSWindow?
-    private let behaviorEngine = PetBehaviorEngine()
+    private let behaviorEngine = PetBehaviorEngine.shared
 
     func show() {
         let petView = NSHostingView(
